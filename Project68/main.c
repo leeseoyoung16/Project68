@@ -1,13 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// 탐색(반복)으로 구현
-
 #define TRUE 1
 #define FALSE 0
 #define MAX_VERTICES 50
 #define MAX_QUEUE_SIZE 10
-
 typedef struct GraphType {
     int n;
     int adj_mat[MAX_VERTICES][MAX_VERTICES];
@@ -15,7 +12,13 @@ typedef struct GraphType {
 
 int visited[MAX_VERTICES];
 
-void init(GraphType* g) {
+
+typedef struct {
+    int data[MAX_VERTICES];
+    int top;
+} Stack;
+
+void init(GraphType* g) { 
     int r, c;
     g->n = 0;
     for (r = 0; r < MAX_VERTICES; r++) {
@@ -24,6 +27,84 @@ void init(GraphType* g) {
         }
     }
 }
+void error(char* message) {
+    fprintf(stderr, "%s\n", message);
+    exit(1);
+}
+
+void stack_init(Stack* stack) { //스택 초기화
+    stack->top = -1;
+}
+
+int is_stack_empty(Stack* stack) {
+    return (stack->top == -1);
+}
+
+void push(Stack* stack, int item) {
+    if (stack->top < MAX_VERTICES - 1) {
+        stack->data[++stack->top] = item;
+    }
+}
+
+int pop(Stack* stack) {
+    if (!is_stack_empty(stack)) {
+        return stack->data[stack->top--];
+    }
+    return -1; // 스택이 비어있음
+}
+
+void insert_vertex(GraphType* g, int v) {
+    if ((g->n) + 1 > MAX_VERTICES) {
+        fprintf(stderr, "그래프: 정점의 갯수 초과\n");
+        return;
+    }
+    g->n++;
+}
+
+void insert_edge(GraphType* g, int start, int end) {
+    if (start >= g->n || end >= g->n) {
+        fprintf(stderr, "그래프: 정점 번호 오류\n");
+        return;
+    }
+    g->adj_mat[start][end] = 1;
+    g->adj_mat[end][start] = 1;
+}
+
+//stack으로 dfs 구현
+int dfs_mat(GraphType* g, int start, int end) { 
+    Stack stack;
+    stack_init(&stack);
+
+    for (int i = 0; i < MAX_VERTICES; i++) { //방문 초기화
+        visited[i] = FALSE;
+    }
+
+    push(&stack, start);
+    visited[start] = TRUE;
+    int count = 0; //방문노드 카운트
+
+    while (!is_stack_empty(&stack)) {
+        int v = pop(&stack);
+        count += 1;
+        printf("%d ", v);
+        
+
+        if (v == end) {
+            return count;
+        }
+
+        for (int w = 0; w < g->n; w++) {
+            if (g->adj_mat[v][w] && !visited[w]) { //간선이 있고, 방문한 정점이 아니면
+                push(&stack, w);
+                visited[w] = TRUE;
+                
+                
+            }
+        }
+    }
+
+    return 0;
+}
 
 typedef int element;
 
@@ -31,11 +112,6 @@ typedef struct {
     element queue[MAX_QUEUE_SIZE];
     int front, rear;
 } QueueType;
-
-void error(char* message) {
-    fprintf(stderr, "%s\n", message);  // 수정: %s로 수정
-    exit(1);
-}
 
 void queue_init(QueueType* q) {
     q->front = q->rear = 0;
@@ -63,77 +139,41 @@ element dequeue(QueueType* q) {
     return q->queue[q->front];
 }
 
-void insert_vertex(GraphType* g, int v) {
-    if ((g->n) + 1 > MAX_VERTICES) {
-        fprintf(stderr, "그래프: 정점의 갯수 초과\n");  // 수정: %s를 %d로 수정하고 개행 문자 추가
-        return;
-    }
-    g->n++;
-}
 
-void insert_edge(GraphType* g, int start, int end) {
-    if (start >= g->n || end >= g->n) {
-        fprintf(stderr, "그래프: 정점 번호 오류\n");  // 수정: %s를 %d로 수정하고 개행 문자 추가
-        return;
-    }
-    g->adj_mat[start][end] = 1;
-    g->adj_mat[end][start] = 1;
-}
+//큐로 bfs 구현
 
-int dfs_mat(GraphType* g, int v, int end) {
-    int w;
-    visited[v] = TRUE;
-    printf("%d ", v); // 방문한 정점 출력
-
-    if (v == end) {
-        printf("\n목표 노드를 찾았습니다.\n");
-        return 1;  // 목표 노드를 찾았으므로 탐색 종료
-    }
-
-    for (w = 0; w < g->n; w++) {
-        if (g->adj_mat[v][w] && !visited[w]) {
-            if (dfs_mat(g, w, end)) {
-                return 1;  // 목표 노드를 찾았으므로 탐색 종료
-            }
-        }
-    }
-
-    return 0;  // 목표 노드를 아직 찾지 않았음
-}
-
-int bfs_mat(GraphType* g, int v, int end) {
+int bfs_mat(GraphType* g, int start, int end) {
     QueueType queue;
-    int w;
-    int found = 0;  // 목표 노드를 찾았는지 여부를 나타내는 변수
-
     queue_init(&queue);
-    visited[v] = TRUE;
-    enqueue(&queue, v);
+    int count = 0;
+
+    for (int i = 0; i < MAX_VERTICES; i++) { //방문 초기화
+        visited[i] = FALSE;
+    }
+
+    enqueue(&queue, start);
+    visited[start] = TRUE;
+    printf("%d ", start);
 
     while (!is_empty(&queue)) {
-        v = dequeue(&queue);
-        printf("%d ", v); // 방문한 정점 출력
+        int v = dequeue(&queue);
 
         if (v == end) {
-            printf("\n목표 노드를 찾았습니다.\n");
-            found = 1;  // 목표 노드를 찾았으므로 탐색 종료
-            break;
+            return count;
         }
 
-        for (w = 0; w < g->n; w++) {
-            if (g->adj_mat[v][w] && !visited[w]) {
-                visited[w] = TRUE;
+        for (int w = 0; w < g->n; w++) {
+            if (g->adj_mat[v][w] && !visited[w]) { //간선이 있고, 방문한 정점이 아니면
+                printf("%d ", w);
+                count += 1;
                 enqueue(&queue, w);
+                visited[w] = TRUE;
             }
         }
     }
 
-    if (found) {
-        return found; 
-    }
-    else {
-        return 0;  // 목표 노드를 찾지 못함
-    }
+    
+    return 0;
 }
 
 int main(void) {
@@ -143,19 +183,20 @@ int main(void) {
     for (int i = 0; i < 11; i++) {
         insert_vertex(&g, i);
     }
-    insert_edge(&g, 0, 5);
+
     insert_edge(&g, 0, 2);
     insert_edge(&g, 0, 4);
+    insert_edge(&g, 0, 5);
     insert_edge(&g, 0, 6);
     insert_edge(&g, 0, 9);
-    insert_edge(&g, 1, 5);
     insert_edge(&g, 1, 4);
+    insert_edge(&g, 1, 5);
     insert_edge(&g, 1, 7);
     insert_edge(&g, 1, 10);
     insert_edge(&g, 2, 3);
     insert_edge(&g, 2, 4);
-    insert_edge(&g, 3, 5);
     insert_edge(&g, 3, 4);
+    insert_edge(&g, 3, 5);
     insert_edge(&g, 4, 5);
     insert_edge(&g, 4, 6);
     insert_edge(&g, 4, 7);
@@ -182,7 +223,7 @@ int main(void) {
             scanf_s("%d %d", &start, &end);  
             count = dfs_mat(&g, start, end);
             if (count > 0)
-                printf("탐색 성공: %d\n", count);
+                printf("\n방문한 노드의 수: %d\n", count);
             else
                 printf("탐색 실패\n");
         }
@@ -192,7 +233,7 @@ int main(void) {
             scanf_s("%d %d", &start, &end);
             count = bfs_mat(&g, start, end);
             if (count > 0)
-                printf("탐색 성공: %d\n", count);
+                printf("\n방문한 노드의 수: %d\n", count);
             else
                 printf("탐색 실패\n");
         }
@@ -200,6 +241,7 @@ int main(void) {
             printf("종료\n");
             break;  
         }
+        printf("\n");
     }
 
     return 0;
